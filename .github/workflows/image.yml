@@ -1,0 +1,51 @@
+name: image
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+env:
+  TENSORFOLD_REPO: https://github.com/joshuaswarren/TensorFold
+  TENSORFOLD_COMMIT: b14adaf2ff4ed41151cf7f48a74bde9070e74727
+  ZIG_VERSION: 0.17.0
+  ZIG_SHA256: 9e8d11661d4ae3bd57702a3832781e23ad151dde5798e16a5ccd503f65234ff8
+  IMAGE: ghcr.io/${{ github.repository_owner }}/tensorfold-vulkan
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the Arch Linux ARM root filesystem
+        run: |
+          curl -fsSL -o ArchLinuxARM-aarch64-latest.tar.gz http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz
+          curl -fsSL -o rootfs.md5 http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz.md5
+          md5sum -c rootfs.md5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          build-args: |
+            TENSORFOLD_REPO=${{ env.TENSORFOLD_REPO }}
+            TENSORFOLD_COMMIT=${{ env.TENSORFOLD_COMMIT }}
+            ZIG_VERSION=${{ env.ZIG_VERSION }}
+            ZIG_SHA256=${{ env.ZIG_SHA256 }}
+          tags: ${{ env.IMAGE }}:${{ env.TENSORFOLD_COMMIT }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=Apache-2.0
+      - name: Smoke test and record the digest
+        run: |
+          docker run --rm "$IMAGE@${{ steps.push.outputs.digest }}" tensorfold-native --version
+          echo "$IMAGE@${{ steps.push.outputs.digest }}" | tee -a "$GITHUB_STEP_SUMMARY"
