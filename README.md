@@ -7,7 +7,7 @@ A GitHub workflow builds it on an arm64 runner. It publishes it to `ghcr.io/josh
 
 ## What is inside
 
-- `tensorfold-native`, built with `zig build native-vulkan -Dvulkan=true` from the TensorFold commit in the workflow, with no patches. The commit is the head of the Vulkan pull request stack that ends at ashhart/TensorFold#3401.
+- `tensorfold-native`, built with `zig build native-vulkan -Dvulkan=true` from the TensorFold commit in the workflow, with no patches. The commit is the head of the Vulkan pull request stack (ashhart/TensorFold#3401) with the k-split decode matmul (#3435) and the tiled decode attention (#3436) on top.
 - The Vulkan loader and the Arch Linux ARM `vulkan-asahi` driver. That is the driver build Omarchy ships on Apple Silicon.
 - curl for the health probe, and TensorFold's license and notices in `/usr/share/licenses/tensorfold`.
 - Nothing else. No compiler, no package database.
